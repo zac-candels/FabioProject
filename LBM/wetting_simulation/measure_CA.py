@@ -4,13 +4,6 @@ import struct
 from matplotlib import pyplot as plt
 
 plt.close('all')
-
-def boundaryCurveFn(x):
-    return 5*np.sin(np.pi/50 * x) + 10.00001
-
-def boundarySlope(x):
-    return 0.1*np.cos(np.pi/50 * x)
-
 def coord_k(k, ly, lz):
     """From a k value, determines its xk, yk, and zk."""
     xk = math.floor(k/(ly*lz))
@@ -214,9 +207,10 @@ phi_interface = []
 for i in range(len(phi[:,0])):
     for j in range(len(phi[0,:])):
         if phi[i,j] > 0.3 and phi[i,j] < 0.7:    
-            full_interface_x.append(i)
-            full_interface_y.append(j)    
-            phi_interface.append(phi[i,j])
+            if j >= 25:
+                full_interface_x.append(i)
+                full_interface_y.append(j)    
+                phi_interface.append(phi[i,j])
               
 full_interface_x = np.asarray(full_interface_x)
 full_interface_y = np.asarray(full_interface_y)
@@ -232,6 +226,7 @@ left_interface_phi = phi_interface[mask]
 plt.figure()
 plt.plot(full_interface_x, full_interface_y, 'o', color='r')
 plt.title('Full interface')
+plt.savefig("./interface.png")
 
 
 # plt.figure()
@@ -349,6 +344,7 @@ y_m = np.mean(left_interpolated_interface_y)
 plt.figure()
 plt.plot(interface_x, interface_y, 'o')
 plt.title("Droplet interface")
+plt.savefig("droplet_interface.png")
 
 #%% Fit a circle to the extracted interface using least squares
 
@@ -376,10 +372,13 @@ residu  = sum((Ri - Radius)**2)
 y_min = min(interface_y)
 
 tol = 1
-
-
-hydrophilicity = "Hydrophilic"
-
+hydrophilicity = ""
+if y_min < y_c:
+    hydrophilicity = "Hydrophobic"
+elif y_min > y_c:
+    hydrophilicity = "Hydrophilic"
+elif abs(y_min - y_c) < tol:
+    hydrophilicity = "Neither"
     
 
 x_min = min(interface_x)
@@ -406,34 +405,19 @@ smallest_y_index = np.argmin(left_interpolated_interface_y)
 target = left_interpolated_interface_y[smallest_y_index]
 
 if hydrophilicity == "Hydrophilic": # ie \theta < 90
-    print("\n\nhydrophilic")
+    print("\n\n hydrophilic")
     closest_index = np.argmin(np.abs(y_fit_top - target))
     closest_val_y = y_fit_top[closest_index]
     closest_val_x = - np.sqrt( Radius**2 - (closest_val_y - y_c)**2 ) + x_c
-    deriv_circle = -(closest_val_x - x_c)/np.sqrt( Radius**2 - (closest_val_x - x_c)**2 )
-    deriv_surface = boundarySlope(closest_val_x)
-    tan_vec_circ = np.array([1, deriv_circle])
-    tan_vec_surface = np.array([1, deriv_surface])
-    dot_prod = np.dot(tan_vec_circ, tan_vec_surface)
-
-    print("\nx = ", closest_val_x)
-
-    CA_1 = np.arccos( dot_prod / ( np.linalg.norm(tan_vec_circ)*np.linalg.norm(tan_vec_surface) ) ) * 180 /np.pi 
-
+    deriv = -(closest_val_x - x_c)/np.sqrt( Radius**2 - (closest_val_x - x_c)**2 )
+    CA_1 = 180*np.arctan(deriv)/np.pi
 elif hydrophilicity == "Hydrophobic": # ie \theta > 90
     print("\n\n hydrophobic")
     closest_index = np.argmin(np.abs(y_fit_bottom - target))
     closest_val_y = y_fit_bottom[closest_index]
     closest_val_x = - np.sqrt( Radius**2 - (closest_val_y - y_c)**2 ) + x_c
-    deriv_circle = (closest_val_x - x_c)/np.sqrt( Radius**2 - (closest_val_x - x_c)**2 )
-    
-    deriv_surface = boundarySlope(closest_val_x)
-    tan_vec_circ = np.array([1, deriv_circle])
-    tan_vec_surface = np.array([1, deriv_surface])
-    dot_prod = np.dot(tan_vec_circ, tan_vec_surface)
-
-    CA_1 = np.arccos( dot_prod / ( np.linalg.norm(tan_vec_circ)*np.linalg.norm(tan_vec_surface) ) ) * 180 /np.pi 
-
+    deriv = (closest_val_x - x_c)/np.sqrt( Radius**2 - (closest_val_x - x_c)**2 )
+    CA_1 = 180 + 180*np.arctan(deriv)/np.pi
 elif hydrophilicity == "Neither":
     if abs(Radius**2 - (closest_val_x - x_c)**2) < 2*tol:
         deriv = "undefined"
@@ -451,6 +435,7 @@ ax.plot(interface_x, interface_y, 'o')
 ax.plot(circle_top[:,0], circle_top[:,1], 'r')
 ax.plot(circle_bottom[:, 0], circle_bottom[:, 1], 'r')
 ax.annotate('**', xy=(closest_val_x, np.min(interface_y)) )
+
 
 
 
