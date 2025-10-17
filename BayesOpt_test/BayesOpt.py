@@ -13,7 +13,7 @@ import subprocess
 import numpy as np
 import os
 
-min_or_max = "max"
+min_or_max = "min" # Can take on the values "min" or "max"
 
 # --- Utility: run one simulation & analysis ---
 
