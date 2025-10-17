@@ -13,9 +13,11 @@ import subprocess
 import numpy as np
 import os
 
+min_or_max = "max"
+
 # --- Utility: run one simulation & analysis ---
 
-def run_simulation(x_coord: float, y_coord: float) -> float:
+def run_simulation(x_coord: float, y_coord: float, min_or_max: str) -> float:
     """
     1) Write parameters to input.txt
     2) Run C++ simulation binary (./run.exe)
@@ -38,9 +40,11 @@ def run_simulation(x_coord: float, y_coord: float) -> float:
         line = f.readline()
         val = float(line.strip())
 
-    print
-    # 4) parse output (assume Analysis.py prints a single float)
-    return val
+    if min_or_max == "min":
+        return val # There's nothing further to do
+    else:
+        return -val # If we're maximizing the function, we need
+                    # to return the negative
 
 
 
@@ -49,19 +53,36 @@ from skopt import gp_minimize
 from skopt.space import Real
 from skopt.callbacks import VerboseCallback
 
-def print_best_so_far(res):
-    current_iteration = len(res.func_vals)
-    current_fn_val = res.func_vals[-1]
-    current_params = res.x_iters[-1]
-    theta, postfraction = current_params
+def print_best_so_far(res, min_or_max):
     
-    print(f"[Iter {len(res.func_vals)}] Current fn. value: {current_fn_val:.4f} at (theta={theta:.2f}, postfraction={postfraction:.2f})")
-    
-    current_best_idx = int(np.argmin(res.func_vals))
-    current_best_val = res.func_vals[current_best_idx]
-    current_best_params = res.x_iters[current_best_idx]
-    theta, postfraction = current_best_params
-    print(f"[Iter {len(res.func_vals)}] Best objective so far: {current_best_val:.4f} at (theta={theta:.2f}, postfraction={postfraction:.2f})\n\n")
+    if min_or_max == "min":
+        current_iteration = len(res.func_vals)
+        current_fn_val = res.func_vals[-1]
+        current_params = res.x_iters[-1]
+        theta, postfraction = current_params
+        
+        print(f"[Iter {len(res.func_vals)}] Current fn. value: {current_fn_val:.4f} at (theta={theta:.2f}, postfraction={postfraction:.2f})")
+        
+        current_best_idx = int(np.argmin(res.func_vals))
+        current_best_val = res.func_vals[current_best_idx]
+        current_best_params = res.x_iters[current_best_idx]
+        theta, postfraction = current_best_params
+        print(f"[Iter {len(res.func_vals)}] Best objective so far: {current_best_val:.4f} at (theta={theta:.2f}, postfraction={postfraction:.2f})\n\n")
+        
+    else:
+        current_iteration = len(res.func_vals)
+        current_fn_val = -res.func_vals[-1]
+        current_params = res.x_iters[-1]
+        theta, postfraction = current_params
+        
+        print(f"[Iter {len(res.func_vals)}] Current fn. value: {current_fn_val:.4f} at (theta={theta:.2f}, postfraction={postfraction:.2f})")
+        
+        current_best_idx = int(np.argmin(res.func_vals))
+        current_best_val = -res.func_vals[current_best_idx]
+        current_best_params = res.x_iters[current_best_idx]
+        theta, postfraction = current_best_params
+        print(f"[Iter {len(res.func_vals)}] Best objective so far: {current_best_val:.4f} at (theta={theta:.2f}, postfraction={postfraction:.2f})\n\n")
+        
 
 
 # Search space
@@ -73,7 +94,7 @@ search_space = [
 def objective_sk(params):
     x, y = params
     try:
-        val = run_simulation(x, y)
+        val = run_simulation(x, y, min_or_max)
     except Exception as e:
         print(f"Error at {params}: {e}")
         return 1e6
@@ -92,7 +113,7 @@ def run_skopt():
         acq_func='EI',
         n_initial_points=10,
         n_calls=n_calls, random_state=42,
-        callback=[print_best_so_far],
+        callback=[lambda res: print_best_so_far(res, min_or_max)],
         xi=xi)
     
     x, y = result.x
