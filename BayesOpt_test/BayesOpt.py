@@ -38,8 +38,9 @@ def run_simulation(x_coord: float, y_coord: float) -> float:
         line = f.readline()
         val = float(line.strip())
 
+    print
     # 4) parse output (assume Analysis.py prints a single float)
-    return -val
+    return val
 
 
 
@@ -49,11 +50,18 @@ from skopt.space import Real
 from skopt.callbacks import VerboseCallback
 
 def print_best_so_far(res):
+    current_iteration = len(res.func_vals)
+    current_fn_val = res.func_vals[-1]
+    current_params = res.x_iters[-1]
+    theta, postfraction = current_params
+    
+    print(f"[Iter {len(res.func_vals)}] Current fn. value: {current_fn_val:.4f} at (theta={theta:.2f}, postfraction={postfraction:.2f})")
+    
     current_best_idx = int(np.argmin(res.func_vals))
-    current_best_val = -res.func_vals[current_best_idx]
+    current_best_val = res.func_vals[current_best_idx]
     current_best_params = res.x_iters[current_best_idx]
     theta, postfraction = current_best_params
-    print(f"[Iter {len(res.func_vals)}] Best objective so far: {current_best_val:.4f} at (theta={theta:.2f}, postfraction={postfraction:.2f})")
+    print(f"[Iter {len(res.func_vals)}] Best objective so far: {current_best_val:.4f} at (theta={theta:.2f}, postfraction={postfraction:.2f})\n\n")
 
 
 # Search space
@@ -73,7 +81,7 @@ def objective_sk(params):
 
 
 def run_skopt():
-    n_calls = 100 # Number of function evaluations
+    n_calls = 400 # Number of function evaluations
     
     xi=0.01 # controls exploration vs exploitation
     # Default value of xi is 0.01
@@ -90,7 +98,7 @@ def run_skopt():
     x, y = result.x
     print("== skopt best ==")
     print(f"x={x:.2e}, y={y:.2e}")
-    print(f"Max value={-result.fun:.4f}")
+    print(f"Optimal value={result.fun:.4f}")
     print("Number of iterations", n_calls)
     print("xi =", xi)
 
